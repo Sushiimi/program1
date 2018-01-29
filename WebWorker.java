@@ -26,6 +26,8 @@ import java.io.*;
 import java.util.Date;
 import java.text.DateFormat;
 import java.util.TimeZone;
+import java.util.*;
+import java.lang.Throwable;
 
 public class WebWorker implements Runnable
 {
@@ -52,9 +54,11 @@ public void run()
    try {
       InputStream  is = socket.getInputStream();
       OutputStream os = socket.getOutputStream();
-      readHTTPRequest(is);
-      writeHTTPHeader(os,"text/html");
-      writeContent(os);
+      String filePath = readHTTPRequest(is); // store the GET request for the HTML file
+      filePath = filePath.substring(1); // removes the '/' from the filePath string
+      writeHTTPHeader(os, "text/html", filePath);
+      //writeContent(os);
+      writeContent(os, filePath);
       os.flush();
       socket.close();
    } catch (Exception e) {
@@ -67,22 +71,40 @@ public void run()
 /**
 * Read the HTTP request header.
 **/
-private void readHTTPRequest(InputStream is)
+private String readHTTPRequest(InputStream is)
 {
+   // vars
    String line;
+   String getLine = "";
+   String extractedPath = "";
+
    BufferedReader r = new BufferedReader(new InputStreamReader(is));
    while (true) {
       try {
+
          while (!r.ready()) Thread.sleep(1);
          line = r.readLine();
          System.err.println("Request line: ("+line+")");
-         if (line.length()==0) break;
+
+         // Determine if the the line contains GET command
+         if( line.length() > 0 )
+            getLine = line.substring(0,3); // saving the GET substring for checking below
+
+         // check the current value of getLine for the GET substring
+         // save the filepath from the GET line if true
+         if( getLine.equals("GET") ){
+             extractedPath = line.substring(4); // create substring starting at '/' in path
+             extractedPath = extractedPath.substring(0, extractedPath.indexOf(" ")); // removes trailing text from GET command
+         }
+
+
+         if (line.length()==0) break; // break when done reading lines
       } catch (Exception e) {
          System.err.println("Request error: "+e);
          break;
       }
    }
-   return;
+   return extractedPath;
 }
 
 /**
@@ -90,12 +112,20 @@ private void readHTTPRequest(InputStream is)
 * @param os is the OutputStream object to write to
 * @param contentType is the string MIME content type (e.g. "text/html")
 **/
-private void writeHTTPHeader(OutputStream os, String contentType) throws Exception
+private void writeHTTPHeader(OutputStream os, String contentType, String filePath) throws Exception
 {
    Date d = new Date();
    DateFormat df = DateFormat.getDateTimeInstance();
    df.setTimeZone(TimeZone.getTimeZone("GMT"));
-   os.write("HTTP/1.1 200 OK\n".getBytes());
+   File f = new File(filePath);
+
+   // if the file exists, give OK response
+   if( f.exists() && !f.isDirectory() )
+      os.write("HTTP/1.1 200 OK\n".getBytes());
+   // otherwise give 404 Not Found
+   else  
+      os.write("HTTP/1.1 404 Not Found\n".getBytes());
+
    os.write("Date: ".getBytes());
    os.write((df.format(d)).getBytes());
    os.write("\n".getBytes());
@@ -106,6 +136,7 @@ private void writeHTTPHeader(OutputStream os, String contentType) throws Excepti
    os.write("Content-Type: ".getBytes());
    os.write(contentType.getBytes());
    os.write("\n\n".getBytes()); // HTTP header ends with 2 newlines
+
    return;
 }
 
@@ -114,11 +145,52 @@ private void writeHTTPHeader(OutputStream os, String contentType) throws Excepti
 * be done after the HTTP header has been written out.
 * @param os is the OutputStream object to write to
 **/
-private void writeContent(OutputStream os) throws Exception
+private void writeContent(OutputStream os, String filePath) throws Exception
 {
-   os.write("<html><head></head><body>\n".getBytes());
-   os.write("<h3>My web server works!</h3>\n".getBytes());
-   os.write("</body></html>\n".getBytes());
+   //os.write("<html><head></head><body>\n".getBytes());
+   //os.write("<h3>My web server works!</h3>\n".getBytes());
+   //os.write("</body></html>\n".getBytes());
+   
+   byte[] fileBytes = new byte[16384];
+   int i;
+   InputStream outputFile = new FileInputStream(filePath);
+   BufferedReader r = new BufferedReader(new InputStreamReader(outputFile));
+   String dateTag = "<cs371date>";
+   String serverIDTag = "<cs371server>";
+   String serverID = "Ian's P1 Server";
+   String currentLine, dateOutputString;
+
+   // process the html file for tags
+   while( ( currentLine = r.readLine() ) != null ){ // loop continues until no lines left to read
+      // checking for the date and serverID tags
+      // and writing them
+      if( currentLine.contains(dateTag) == true ){
+         Date tagDate = new Date();
+         DateFormat tagDateFormat = DateFormat.getDateTimeInstance();
+         dateOutputString = currentLine.replaceAll( dateTag, tagDate.toString() );
+         os.write( dateOutputString.getBytes() );
+      }
+      else if ( ( currentLine.contains(serverIDTag) ) == true ){
+         String serverIDOutputString = currentLine.replaceAll( serverIDTag, )
+         os.write( currentLine.replaceAll( serverIDTag, )
+
+      }
+
+
+   } 
+
+
+   
+   // converting InputStream to a byte array then
+   // serving the file
+   while( ( i = outputFile.read(fileBytes) ) > 0 )
+       os.write(fileBytes, 0, i);
 }
 
 } // end class
+
+
+
+
+
+
