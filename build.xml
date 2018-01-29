@@ -1,0 +1,10 @@
+<project name = "CS371 - P1 - Web Server" default = "compile" basedir = ".">
+	<description>
+		Basic build file for P1 Web Server
+	</description>
+
+	<target name = "compile">
+		<javac srcdir = "."/>
+	</target>
+
+</project>
