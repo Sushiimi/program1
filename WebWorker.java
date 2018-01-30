@@ -97,7 +97,6 @@ private String readHTTPRequest(InputStream is)
              extractedPath = extractedPath.substring(0, extractedPath.indexOf(" ")); // removes trailing text from GET command
          }
 
-
          if (line.length()==0) break; // break when done reading lines
       } catch (Exception e) {
          System.err.println("Request error: "+e);
@@ -155,8 +154,8 @@ private void writeContent(OutputStream os, String filePath) throws Exception
    int i;
    InputStream outputFile = new FileInputStream(filePath);
    BufferedReader r = new BufferedReader(new InputStreamReader(outputFile));
-   String dateTag = "<cs371date>";
-   String serverIDTag = "<cs371server>";
+   final String dateTag = "<cs371date>";
+   final String serverIDTag = "<cs371server>";
    String serverID = "Ian's P1 Server";
    String currentLine, dateOutputString;
 
@@ -164,28 +163,28 @@ private void writeContent(OutputStream os, String filePath) throws Exception
    while( ( currentLine = r.readLine() ) != null ){ // loop continues until no lines left to read
       // checking for the date and serverID tags
       // and writing them
-      if( currentLine.contains(dateTag) == true ){
-         Date tagDate = new Date();
-         DateFormat tagDateFormat = DateFormat.getDateTimeInstance();
-         dateOutputString = currentLine.replaceAll( dateTag, tagDate.toString() );
+      if( ( currentLine.contains( dateTag ) ) == true ){
+         Date outputDate = new Date();
+         DateFormat outputDateFormat = DateFormat.getDateTimeInstance();
+         outputDateFormat.setTimeZone( TimeZone.getTimeZone("GMT") );
+         dateOutputString = currentLine.replaceAll( dateTag, ( outputDateFormat.format( outputDate ) ) );
          os.write( dateOutputString.getBytes() );
       }
-      else if ( ( currentLine.contains(serverIDTag) ) == true ){
-         String serverIDOutputString = currentLine.replaceAll( serverIDTag, )
-         os.write( currentLine.replaceAll( serverIDTag, )
-
+      else if ( ( currentLine.contains( serverIDTag ) ) == true ){
+         String serverIDOutputString = currentLine.replaceAll( serverIDTag, serverID );
+         os.write( serverIDOutputString.getBytes() );
       }
+      else
+      	os.write( currentLine.getBytes() );
+   }// end while
 
-
-   } 
-
-
-   
    // converting InputStream to a byte array then
    // serving the file
    while( ( i = outputFile.read(fileBytes) ) > 0 )
        os.write(fileBytes, 0, i);
-}
+
+
+}// end writeContent function
 
 } // end class
 
