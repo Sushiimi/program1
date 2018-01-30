@@ -20,13 +20,12 @@
 *
 **/
 
+// removed redundancies in imports - Ian Johnson - 1-30-2018
+import java.util.*;
+import java.io.*;
 import java.net.Socket;
 import java.lang.Runnable;
-import java.io.*;
-import java.util.Date;
 import java.text.DateFormat;
-import java.util.TimeZone;
-import java.util.*;
 import java.lang.Throwable;
 
 public class WebWorker implements Runnable
@@ -57,7 +56,6 @@ public void run()
       String filePath = readHTTPRequest(is); // store the GET request for the HTML file
       filePath = filePath.substring(1); // removes the '/' from the filePath string
       writeHTTPHeader(os, "text/html", filePath);
-      //writeContent(os);
       writeContent(os, filePath);
       os.flush();
       socket.close();
@@ -111,7 +109,7 @@ private String readHTTPRequest(InputStream is)
 * @param os is the OutputStream object to write to
 * @param contentType is the string MIME content type (e.g. "text/html")
 **/
-private void writeHTTPHeader(OutputStream os, String contentType, String filePath) throws Exception
+private File writeHTTPHeader(OutputStream os, String contentType, String filePath) throws Exception
 {
    Date d = new Date();
    DateFormat df = DateFormat.getDateTimeInstance();
@@ -122,8 +120,9 @@ private void writeHTTPHeader(OutputStream os, String contentType, String filePat
    if( f.exists() && !f.isDirectory() )
       os.write("HTTP/1.1 200 OK\n".getBytes());
    // otherwise give 404 Not Found
-   else  
+   else
       os.write("HTTP/1.1 404 Not Found\n".getBytes());
+
 
    os.write("Date: ".getBytes());
    os.write((df.format(d)).getBytes());
@@ -135,8 +134,8 @@ private void writeHTTPHeader(OutputStream os, String contentType, String filePat
    os.write("Content-Type: ".getBytes());
    os.write(contentType.getBytes());
    os.write("\n\n".getBytes()); // HTTP header ends with 2 newlines
-
-   return;
+   
+   return f;
 }
 
 /**
@@ -146,42 +145,38 @@ private void writeHTTPHeader(OutputStream os, String contentType, String filePat
 **/
 private void writeContent(OutputStream os, String filePath) throws Exception
 {
-   //os.write("<html><head></head><body>\n".getBytes());
-   //os.write("<h3>My web server works!</h3>\n".getBytes());
-   //os.write("</body></html>\n".getBytes());
-   
-   byte[] fileBytes = new byte[16384];
+
    int i;
-   InputStream outputFile = new FileInputStream(filePath);
+   //byte[] fileBytes = new byte[16384];
+   FileInputStream outputFile = new FileInputStream( filePath );
    BufferedReader r = new BufferedReader(new InputStreamReader(outputFile));
    final String dateTag = "<cs371date>";
    final String serverIDTag = "<cs371server>";
    String serverID = "Ian's P1 Server";
-   String currentLine, dateOutputString;
+   String currentLine, dateOutputString, serverIDOutputString;
 
    // process the html file for tags
    while( ( currentLine = r.readLine() ) != null ){ // loop continues until no lines left to read
+
       // checking for the date and serverID tags
-      // and writing them
+      // and replacing them
       if( ( currentLine.contains( dateTag ) ) == true ){
          Date outputDate = new Date();
          DateFormat outputDateFormat = DateFormat.getDateTimeInstance();
-         outputDateFormat.setTimeZone( TimeZone.getTimeZone("GMT") );
-         dateOutputString = currentLine.replaceAll( dateTag, ( outputDateFormat.format( outputDate ) ) );
-         os.write( dateOutputString.getBytes() );
-      }
-      else if ( ( currentLine.contains( serverIDTag ) ) == true ){
-         String serverIDOutputString = currentLine.replaceAll( serverIDTag, serverID );
-         os.write( serverIDOutputString.getBytes() );
-      }
-      else
-      	os.write( currentLine.getBytes() );
+         outputDateFormat.setTimeZone( TimeZone.getTimeZone("MST") );
+         currentLine = currentLine.replaceAll( dateTag, ( outputDateFormat.format( outputDate ) ) );
+      }// end if
+
+      if ( ( currentLine.contains( serverIDTag ) ) == true )
+         currentLine = currentLine.replaceAll( serverIDTag, serverID );
+      
+      os.write( currentLine.getBytes() ); // write currentLine after replacing any tags
    }// end while
 
    // converting InputStream to a byte array then
    // serving the file
-   while( ( i = outputFile.read(fileBytes) ) > 0 )
-       os.write(fileBytes, 0, i);
+   //while( ( i = outputFile.read(fileBytes) ) > 0 )
+       //os.write(fileBytes, 0, i);
 
 
 }// end writeContent function
