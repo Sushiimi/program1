@@ -108,76 +108,86 @@ private String readHTTPRequest(InputStream is)
 * Write the HTTP header lines to the client network connection.
 * @param os is the OutputStream object to write to
 * @param contentType is the string MIME content type (e.g. "text/html")
+* @param filePath is the file directory for the requested file
 **/
-private File writeHTTPHeader(OutputStream os, String contentType, String filePath) throws Exception
+private void writeHTTPHeader(OutputStream os, String contentType, String filePath) throws Exception
 {
    Date d = new Date();
    DateFormat df = DateFormat.getDateTimeInstance();
-   df.setTimeZone(TimeZone.getTimeZone("GMT"));
-   File f = new File(filePath);
+   df.setTimeZone(TimeZone.getTimeZone("MST"));
+   File f = new File( filePath );
 
    // if the file exists, give OK response
    if( f.exists() && !f.isDirectory() )
       os.write("HTTP/1.1 200 OK\n".getBytes());
    // otherwise give 404 Not Found
-   else
+   else{
       os.write("HTTP/1.1 404 Not Found\n".getBytes());
-
+      System.err.println("Write line: (File: "+filePath+", Not Found)");
+      System.err.println("Write line: (Displaying 404 Page)");
+   }
 
    os.write("Date: ".getBytes());
    os.write((df.format(d)).getBytes());
    os.write("\n".getBytes());
-   os.write("Server: Jon's very own server\n".getBytes());
-   //os.write("Last-Modified: Wed, 08 Jan 2003 23:11:55 GMT\n".getBytes());
-   //os.write("Content-Length: 438\n".getBytes()); 
+   os.write("Server: Ian's very own server\n".getBytes());
    os.write("Connection: close\n".getBytes());
    os.write("Content-Type: ".getBytes());
    os.write(contentType.getBytes());
    os.write("\n\n".getBytes()); // HTTP header ends with 2 newlines
    
-   return f;
+   return;
 }
 
 /**
 * Write the data content to the client network connection. This MUST
 * be done after the HTTP header has been written out.
 * @param os is the OutputStream object to write to
+* @param filePath is the file directory for the requested file
 **/
 private void writeContent(OutputStream os, String filePath) throws Exception
 {
-
-   int i;
-   //byte[] fileBytes = new byte[16384];
-   FileInputStream outputFile = new FileInputStream( filePath );
-   BufferedReader r = new BufferedReader(new InputStreamReader(outputFile));
+   // vars and objects
+   File f = new File( filePath ); // needed to check if valid file
    final String dateTag = "<cs371date>";
    final String serverIDTag = "<cs371server>";
-   String serverID = "Ian's P1 Server";
+   final String error404path = "testfiles/404page.html";
+   final String serverID = "Ian's P1 Server";
    String currentLine, dateOutputString, serverIDOutputString;
 
-   // process the html file for tags
-   while( ( currentLine = r.readLine() ) != null ){ // loop continues until no lines left to read
+   // if the file exists, process and serve it, otherwise print a 404 page
+   if( f.exists() && !f.isDirectory() ){
 
-      // checking for the date and serverID tags
-      // and replacing them
-      if( ( currentLine.contains( dateTag ) ) == true ){
-         Date outputDate = new Date();
-         DateFormat outputDateFormat = DateFormat.getDateTimeInstance();
-         outputDateFormat.setTimeZone( TimeZone.getTimeZone("MST") );
-         currentLine = currentLine.replaceAll( dateTag, ( outputDateFormat.format( outputDate ) ) );
-      }// end if
+      FileInputStream outputFile = new FileInputStream( filePath );
+      BufferedReader r = new BufferedReader(new InputStreamReader(outputFile));
 
-      if ( ( currentLine.contains( serverIDTag ) ) == true )
-         currentLine = currentLine.replaceAll( serverIDTag, serverID );
+      // process the html file for tags
+      while( ( currentLine = r.readLine() ) != null ){ // loop continues until no lines left to read
+
+         // checking for the date and serverID tags
+         // and replacing them
+         if( ( currentLine.contains( dateTag ) ) == true ){
+            Date outputDate = new Date();
+            DateFormat outputDateFormat = DateFormat.getDateTimeInstance();
+            outputDateFormat.setTimeZone( TimeZone.getTimeZone("MST") );
+            currentLine = currentLine.replaceAll( dateTag, ( outputDateFormat.format( outputDate ) ) );
+         }// end if
+
+         if ( ( currentLine.contains( serverIDTag ) ) == true )
+            currentLine = currentLine.replaceAll( serverIDTag, serverID );
       
-      os.write( currentLine.getBytes() ); // write currentLine after replacing any tags
-   }// end while
+         os.write( currentLine.getBytes() ); // write currentLine after replacing any tags
+      }// end while
+   }
+   else{ // outputted from byte[] to preserve ASCII 404 page
+      int i;
+      byte[] fileBytes = new byte[16384];
+      FileInputStream errorPage = new FileInputStream( error404path );
+      BufferedReader r2 = new BufferedReader( new InputStreamReader( errorPage ) );
+      while( ( i = errorPage.read(fileBytes) ) > 0 )
+         os.write(fileBytes, 0, i);
 
-   // converting InputStream to a byte array then
-   // serving the file
-   //while( ( i = outputFile.read(fileBytes) ) > 0 )
-       //os.write(fileBytes, 0, i);
-
+   }// end if else
 
 }// end writeContent function
 
