@@ -7,4 +7,8 @@
 		<javac srcdir = "."/>
 	</target>
 
+	<target name = "run" depends = "compile">
+		<java classname = "WebServer" classpath = "."/>
+	</target>
+
 </project>
